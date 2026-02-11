@@ -1,5 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import CreditLimitResponse from "./Components/CreditLimitResponse";
+import LinkGeneratorPage from "./Pages/LinkGeneratorPage";
+import ResponseForm from "./Components/ResponseForm";
 import "./App.css";
 function App() {
   return (
@@ -14,6 +16,19 @@ function App() {
       <Route
         path="/credit-limit"
         element={<CreditLimitResponse />}
+      />
+
+
+      {/* Link Generator */}
+      <Route
+        path="/link-generator"
+        element={<LinkGeneratorPage />}
+      />
+
+      {/* Respond page for generated links */}
+      <Route
+        path="/respond"
+        element={<ResponseForm />}
       />
 
       {/* Catch-all */}

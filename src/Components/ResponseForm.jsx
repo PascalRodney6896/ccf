@@ -7,12 +7,24 @@ function NcbaLogo({ size = 48 }) {
   return <img src={ncbaLogo} alt="NCBA Bank" style={{ height: size, width: "auto" }} />;
 }
 
+
+import { useEffect } from "react";
+
 export default function ResponseForm() {
   const [searchParams] = useSearchParams();
   const referenceId = searchParams.get("ref");
+  const urlType = searchParams.get("type");
 
   // ------------------- Campaign Selection -------------------
   const [campaignType, setCampaignType] = useState("limit"); // "limit" or "prequalified"
+  // If urlType is present, hide selector and force campaignType
+  const hideSelector = urlType === "limit" || urlType === "prequalified";
+
+  // Set campaignType from URL on mount
+  useEffect(() => {
+    if (urlType === "prequalified") setCampaignType("prequalified");
+    else if (urlType === "limit") setCampaignType("limit");
+  }, [urlType]);
 
   if (!referenceId) {
     return (
@@ -129,31 +141,54 @@ export default function ResponseForm() {
     setLoading(true);
 
     try {
-      const payload = { campaignType, referenceId };
+      let url = "";
+      let body = {};
       if (campaignType === "limit") {
-        payload.data = { idNumberLimit, decision, acceptFull, requestedLimit, declineReasonLimit, tcsAcceptedLimit };
+        url = "http://localhost:5038/api/CreditLimitResponse";
+        body = {
+          referenceId,
+          idNumber: idNumberLimit,
+          decision,
+          acceptFull,
+          requestedLimit: requestedLimit ? Number(requestedLimit) : null,
+          tcsAccepted: tcsAcceptedLimit,
+          consentAccepted: true, // Not in UI, set true for now
+          declineReason: declineReasonLimit
+        };
       } else {
-        payload.data = {
-          takeCard,
-          confirmFullLimit,
-          customLimit,
-          paymentDate,
-          monthlyRepayment,
-          collectionPreference,
-          primaryAccount,
+        url = "http://localhost:5038/api/PrequalifiedCardResponse";
+        body = {
+          referenceId,
           idNumber,
           email,
           mobile,
+          takeCard,
+          confirmFullLimit,
+          customLimit: customLimit ? Number(customLimit) : null,
+          paymentDate: paymentDate ? Number(paymentDate) : null,
+          monthlyRepayment: monthlyRepayment ? Number(monthlyRepayment) : null,
+          collectionPreference,
+          primaryAccount,
           employer,
           employerEmail,
-          supplementaryCard: suppCard
-            ? { suppName, suppRelationship, suppMobile, suppEmail, suppDOB, suppIDNumber, suppIDFile }
-            : null,
+          suppCard,
+          suppName,
+          suppRelationship,
+          suppMobile,
+          suppEmail,
+          suppDOB,
+          suppIDNumber,
+          suppIDFile,
           tcsAccepted,
-          declineReason: takeCard === "NO" ? declineReason : null,
+          declineReason: takeCard === "NO" ? declineReason : null
         };
       }
-      console.log("Payload submitted:", payload);
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+      if (!resp.ok) throw new Error("API error");
       setSubmitted(true);
     } catch {
       setError("Submission failed. Please try again.");
@@ -185,21 +220,23 @@ export default function ResponseForm() {
         </div>
       </header>
 
-      {/* Campaign Selector */}
-      <div className="max-w-3xl mx-auto mb-6 flex gap-4">
-        <button
-          className={`px-4 py-2 rounded-lg font-semibold ${campaignType === "limit" ? "bg-blue-600 text-white" : "bg-white border"}`}
-          onClick={() => setCampaignType("limit")}
-        >
-          Limit Increase
-        </button>
-        <button
-          className={`px-4 py-2 rounded-lg font-semibold ${campaignType === "prequalified" ? "bg-blue-600 text-white" : "bg-white border"}`}
-          onClick={() => setCampaignType("prequalified")}
-        >
-          Prequalified Card
-        </button>
-      </div>
+      {/* Campaign Selector (hidden if type is in URL) */}
+      {!hideSelector && (
+        <div className="max-w-3xl mx-auto mb-6 flex gap-4">
+          <button
+            className={`px-4 py-2 rounded-lg font-semibold ${campaignType === "limit" ? "bg-blue-600 text-white" : "bg-white border"}`}
+            onClick={() => setCampaignType("limit")}
+          >
+            Limit Increase
+          </button>
+          <button
+            className={`px-4 py-2 rounded-lg font-semibold ${campaignType === "prequalified" ? "bg-blue-600 text-white" : "bg-white border"}`}
+            onClick={() => setCampaignType("prequalified")}
+          >
+            Prequalified Card
+          </button>
+        </div>
+      )}
 
       {/* Form */}
       <div className="bg-white rounded-xl shadow max-w-3xl mx-auto p-6 space-y-6">
